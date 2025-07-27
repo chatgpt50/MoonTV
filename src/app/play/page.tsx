@@ -1099,34 +1099,34 @@ function PlayPageClient() {
         },
         // HLS 支持配置
         customType: {
-          m3u8: function (video: HTMLVideoElement, url: string) {
-            if (!Hls) {
-              console.error('HLS.js 未加载');
-              return;
-            }
+  m3u8: function (video: HTMLVideoElement, url: string) {
+    const isIOS = /iP(hone|od|ad)/i.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-            if (video.hls) {
-              video.hls.destroy();
-            }
-            const hls = new Hls({
-              debug: false, // 关闭日志
-              enableWorker: true, // WebWorker 解码，降低主线程压力
-              lowLatencyMode: true, // 开启低延迟 LL-HLS
+    if (isIOS && isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+      video.addEventListener('loadedmetadata', () => {
+        video.play();
+      });
+      return;
+    }
 
-              /* 缓冲/内存相关 */
-              maxBufferLength: 30, // 前向缓冲最大 30s，过大容易导致高延迟
-              backBufferLength: 30, // 仅保留 30s 已播放内容，避免内存占用
-              maxBufferSize: 60 * 1000 * 1000, // 约 60MB，超出后触发清理
+    if (video.hls) {
+      video.hls.destroy();
+    }
 
-              /* 自定义loader */
-              loader: blockAdEnabledRef.current
-                ? CustomHlsJsLoader
-                : Hls.DefaultConfig.loader,
-            });
+    const hls = new Hls({
+      debug: false,
+      enableWorker: true,
+      lowLatencyMode: true,
+    });
 
-            hls.loadSource(url);
-            hls.attachMedia(video);
-            video.hls = hls;
+    hls.attachMedia(video);
+    hls.loadSource(url);
+    video.hls = hls;
+  },
+}
+
 
             ensureVideoSource(video, url);
 
